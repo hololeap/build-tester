@@ -55,23 +55,19 @@ common fast
 
 library
     import:           all
-<<<<<<< HEAD
-    exposed-modules:  MyLib
-=======
     exposed-modules:
         , Distribution.Gentoo.BuildTest
->>>>>>> 441f24f (Initial commit)
+        , Distribution.Gentoo.BuildTest.Cmd
+        , Distribution.Gentoo.BuildTest.Types
 
     -- Modules included in this library but not exported.
     -- other-modules:
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-<<<<<<< HEAD
-    build-depends:    base >=4.13 && <5
-=======
     build-depends:
         , base >=4.13 && <5
+        , QuickCheck
         , directory
         , hashable
         , monoidal-containers
@@ -79,7 +75,7 @@ library
         , process
         , text
         , transformers
->>>>>>> 441f24f (Initial commit)
+        , unordered-containers
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -108,12 +104,23 @@ test-suite build-tester-test
     build-depends:
         , build-tester
         , base
-        , QuickCheck
+--         , QuickCheck
+        , hashable
+        , monoidal-containers
+        , mtl
+        , pretty-simple
         , tasty
         , tasty-hunit
+        , tasty-quickcheck
+        , text
+        , unordered-containers
+
+    other-modules:
+        , RepoPackages.ValidityTests
 
     if flag(gentoo-tests)
         cpp-options: -DGENTOO_TESTS
         -- build-depends:
-        -- other-modules:
+        other-modules:
+            , RepoPackages.GentooTests
 
