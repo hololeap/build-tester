@@ -7,6 +7,7 @@ import Data.Foldable
 import Data.Hashable (Hashable)
 import qualified Data.HashMap.Strict as HM
 import Data.HashMap.Monoidal (MonoidalHashMap(..))
+import qualified Data.HashMap.Monoidal as MHM
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as S
 import Data.Text (Text)
@@ -61,3 +62,27 @@ repoDifference (MonoidalHashMap m1) (MonoidalHashMap m2)
 
 repoSize :: RepoPackages -> Int
 repoSize = foldl' (\i s -> i + length s) 0
+
+-- | Delete a category/package entry from the hash map. If an internal
+--   hash set is left empty after removing one of its packages, this will
+--   automatically delete that entry from the parent hash map.
+repoDelete :: Category -> Package -> RepoPackages -> RepoPackages
+repoDelete c p (MonoidalHashMap m) = MonoidalHashMap $ HM.update trimSet c m
+  where
+    trimSet :: HashSet Package -> Maybe (HashSet Package)
+    trimSet s =
+        let s' = S.delete p s
+        in if S.null s' then Nothing else Just s'
+
+-- | Take the "first" package from a 'RepoPackages' hash map and return it
+--   plus the modified hash map. Note that the notion of a "first package" is
+--   based off the implementation of the hash map, and therefore could also be
+--   thought of as taking a "random" package.
+repoTakeFirst :: RepoPackages -> Maybe ((Category, Package), RepoPackages)
+repoTakeFirst m = go (MHM.toList m)
+  where
+    go :: [(Category, HashSet Package)] -> Maybe ((Category, Package), RepoPackages)
+    go [] = Nothing
+    go ((c,s):xs) = case S.toList s of
+        [] -> go xs -- Failsafe in case of empty sets
+        p:_ -> Just ((c,p), repoDelete c p m)

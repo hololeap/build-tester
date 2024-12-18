@@ -2,6 +2,7 @@
 
 module Main where
 
+import Control.Monad
 import Control.Monad.Trans.Accum
 import Control.Monad.IO.Class
 
@@ -15,7 +16,14 @@ main = flip evalAccumT mempty $ do
 
     checkRepoName repo
 
-    allPkgs <- allRepoPackages repo
-    installedPkgs <- installedRepoPackages repo
-    let diffPkgs = repoDifference allPkgs installedPkgs
-    liftIO $ putStrLn "doot!"
+    forever $ do
+        allPkgs <- allRepoPackages repo
+        installedPkgs <- installedRepoPackages repo
+        let diffPkgs = repoDifference allPkgs installedPkgs
+        case repoTakeFirst diffPkgs of
+             Nothing -> pure ()
+             Just ((c,p),_) -> do
+                 _ <- runEmerge ["--oneshot", toString c ++ "/" ++ toString p]
+                 pure ()
+
+
