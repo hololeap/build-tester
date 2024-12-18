@@ -3,7 +3,8 @@
 
 module RepoPackages.GentooTests where
 
-import Control.Monad.Reader
+import Control.Monad.Trans.Accum
+import Control.Monad.IO.Class
 import Data.Foldable
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Monoidal as M
@@ -20,18 +21,17 @@ repo :: String
 repo = "haskell"
 
 gentooTests :: TestTree
-gentooTests = testCase ("live ::" ++ repo ++ " packages") do
-    findPortageq >>= runReaderT (checkRepoName (RepoName repo))
-    findEix >>= runReaderT do
-        allPkgs <- allRepoPackages (RepoName repo)
-        installedPkgs <- installedRepoPackages (RepoName repo)
-        let diffPkgs = repoDifference allPkgs installedPkgs
-        liftIO $ putStrLn ""
-        forM_
-            [ ("All", repoSize allPkgs)
-            , ("Installed", repoSize installedPkgs)
-            , ("Not-installed", repoSize diffPkgs)
-            ]
-            $ \(d,m) -> do
-                liftIO $ putStr $ d ++ " ::" ++ repo ++ " packages: "
-                pPrintForceColor m
+gentooTests = testCase ("live ::" ++ repo ++ " packages") $ flip evalAccumT mempty $ do
+    checkRepoName (RepoName repo)
+    allPkgs <- allRepoPackages (RepoName repo)
+    installedPkgs <- installedRepoPackages (RepoName repo)
+    let diffPkgs = repoDifference allPkgs installedPkgs
+    liftIO $ putStrLn ""
+    forM_
+        [ ("All", repoSize allPkgs)
+        , ("Installed", repoSize installedPkgs)
+        , ("Not-installed", repoSize diffPkgs)
+        ]
+        $ \(d,m) -> do
+            liftIO $ putStr $ d ++ " ::" ++ repo ++ " packages: "
+            pPrintForceColor m

@@ -91,6 +91,7 @@ executable build-tester
     build-depends:
         , base               >=4.13 && <5
         , build-tester
+        , transformers
 
     hs-source-dirs:   src-exe
     default-language: Haskell2010
@@ -107,12 +108,12 @@ test-suite build-tester-test
 --         , QuickCheck
         , hashable
         , monoidal-containers
-        , mtl
         , pretty-simple
         , tasty
         , tasty-hunit
         , tasty-quickcheck
         , text
+        , transformers
         , unordered-containers
 
     other-modules:

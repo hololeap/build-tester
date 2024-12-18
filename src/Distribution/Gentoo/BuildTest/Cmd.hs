@@ -1,8 +1,18 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Distribution.Gentoo.BuildTest.Cmd where
+module Distribution.Gentoo.BuildTest.Cmd
+    ( MemoPaths(..)
+    , EnvT
+    , askEixPath
+    , askPortageqPath
+    , askEmergePath
+    , runCmd
+    , defaultDie
+    ) where
 
-import Control.Monad.Reader
+import Control.Monad.Trans.Accum
+import Control.Monad.IO.Class
+import Data.Monoid (First(..))
 import System.Directory (findExecutable)
 import System.Exit (ExitCode(..), die)
 import System.IO (hPutStrLn, stderr)
@@ -10,25 +20,44 @@ import System.Process (readProcessWithExitCode)
 
 import Distribution.Gentoo.BuildTest.Types
 
--- | Interface to run
-runCmd :: (MonadIO m, ToString r)
-    => [String]
-    -> (ExitCode -> String -> String -> ReaderT r m a)
-    -> ReaderT r m a
-runCmd args f = do
-    exe <- ask
-    -- Pass empty string to stdin, as it shouldn't be needed
-    (ec, out, err) <- liftIO $ readProcessWithExitCode (toString exe) args ""
-    f ec out err
+-- | Basic memoization for various needed executable paths
+data MemoPaths = MemoPaths
+    { envEixPath :: First EixPath
+    , envPortageqPath :: First PortageqPath
+    , envEmergePath :: First EmergePath
+    } deriving (Show, Eq, Ord)
 
--- | Stuff the 'FilePath's into 'ReaderT' so it's easy to run 'findEix' and
---   'findPortagq' once.
---
---   (Because of the builtin checks, it would be expensive to run those
---   functions more than once.)
-type EixT = ReaderT EixPath
-type PortageqT = ReaderT PortageqPath
-type EmergeT = ReaderT EmergePath
+instance Semigroup MemoPaths where
+    MemoPaths a1 b1 c1 <> MemoPaths a2 b2 c2
+        = MemoPaths (a1 <> a2) (b1 <> b2) (c1 <> c2)
+
+instance Monoid MemoPaths where
+    mempty = MemoPaths mempty mempty mempty
+
+-- | Only allows for reading the memoized paths, or initializing them if they
+--   have not been initialized yet
+type EnvT = AccumT MemoPaths
+
+askEixPath :: MonadIO m => EnvT m EixPath
+askEixPath = getFirst . envEixPath <$> look >>= \case
+    Just p -> pure p
+    _ -> do
+        p <- findEix
+        p <$ add mempty { envEixPath = pure p }
+
+askPortageqPath :: MonadIO m => EnvT m PortageqPath
+askPortageqPath = getFirst . envPortageqPath <$> look >>= \case
+    Just p -> pure p
+    _ -> do
+        p <- findPortageq
+        p <$ add mempty { envPortageqPath = pure p }
+
+askEmergePath :: MonadIO m => EnvT m EmergePath
+askEmergePath = getFirst . envEmergePath <$> look >>= \case
+    Just p -> pure p
+    _ -> do
+        p <- findEmerge
+        p <$ add mempty { envEmergePath = pure p }
 
 -- | Finds the @eix@ executable in @PATH@ and runs @eix-update@.
 --   Calls 'die' if either are not found.
@@ -38,20 +67,17 @@ findEix = liftIO $ findExecutable "eix" >>= \case
         [ "Could not find \"eix\" executable."
         , "Please install app-portage/eix."
         ]
-    Just exe -> liftIO (findExecutable "eix-update") >>= \case
+    Just exe -> findExecutable "eix-update" >>= \case
         Nothing -> die $ unwords
             [ "Could not find \"eix-update\" executable."
             , "Please install app-portage/eix."
             ]
         Just updateExe -> do
-            runReaderT (runUpdate exe) updateExe
-  where
-    runUpdate exe = do
-        liftIO $ hPutStrLn stderr $ "Running 'eix-update'"
-        runCmd [] $ \ec out err -> case ec of
-            ExitSuccess -> pure $ EixPath exe
-            ExitFailure _ -> defaultDie exe [] ec out err
+            hPutStrLn stderr "Running 'eix-update'"
+            _ <- runCmd updateExe []
+            pure (EixPath exe)
 
+-- | Finds the @portageq@ executable in @PATH@. Calls 'die' if it is not found.
 findPortageq :: MonadIO m => m PortageqPath
 findPortageq = liftIO $ do
     mp <- findExecutable "portageq"
@@ -62,6 +88,7 @@ findPortageq = liftIO $ do
             , "sys-apps/portage is required."
             ]
 
+-- | Finds the @emerge@ executable in @PATH@. Calls 'die' if it is not found.
 findEmerge :: MonadIO m => m EmergePath
 findEmerge = liftIO $ do
     mp <- findExecutable "emerge"
@@ -72,6 +99,18 @@ findEmerge = liftIO $ do
             , "sys-apps/portage is required."
             ]
 
+-- | Run a command and return stdout, or 'defaultDie' if it fails.
+runCmd :: (MonadIO m, ToString r)
+    => r
+    -> [String]
+    -> m String
+runCmd exe args = liftIO $ do
+    (ec, out, err) <- readProcessWithExitCode (toString exe) args ""
+    case ec of
+         ExitSuccess -> pure out
+         ExitFailure _ -> defaultDie exe args ec out err
+
+-- | Dies with a default message when a program returns an unexpected exit code
 defaultDie :: (MonadIO m, ToString r)
     => r
     -> [String]
