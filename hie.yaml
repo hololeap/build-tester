@@ -1,0 +1,10 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:build-tester"
+
+    - path: "src-exe/Main.hs"
+      component: "build-tester:exe:build-tester"
+
+    - path: "test"
+      component: "build-tester:test:build-tester-test"
