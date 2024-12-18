@@ -3,7 +3,7 @@ name:               build-tester
 version:            0.1.0.0
 synopsis:           Build-test packages from a gentoo repository
 
-tested-with:        GHC == { 8.10.7, 9.0.2, 9.2.8, 9.4.5 }
+tested-with:        GHC == { 9.2.8, 9.4.8, 9.6.4, 9.8.2, 9.10.1 }
 
 -- A longer description of the package.
 description:
