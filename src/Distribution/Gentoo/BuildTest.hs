@@ -11,6 +11,7 @@ import qualified Data.HashMap.Monoidal as M
 import qualified Data.HashSet as S
 import qualified Data.List as L
 import qualified Data.Text as T
+import Data.Text (Text)
 import System.Exit (ExitCode(..), die)
 import System.Process (readProcessWithExitCode)
 
@@ -24,7 +25,7 @@ allRepoPackages :: MonadIO m
     => RepoName
     -> EnvT m RepoPackages
 allRepoPackages (RepoName n) = do
-    out <- runEix args
+    (out, _, _) <- runEix args
     pure $ toRepoPackages out
   where
     args = ["--only-names", "--in-overlay", n]
@@ -33,13 +34,13 @@ installedRepoPackages :: MonadIO m
     => RepoName
     -> EnvT m RepoPackages
 installedRepoPackages (RepoName n) = do
-    out <- runEix args
+    (out, _, _) <- runEix args
     pure $ toRepoPackages out
   where
     args = ["--only-names", "--installed-from-overlay", n]
 
-toRepoPackages :: String -> RepoPackages
-toRepoPackages = foldMap splitLine . lines
+toRepoPackages :: Text -> RepoPackages
+toRepoPackages = foldMap splitLine . lines . T.unpack
   where
     splitLine l =
         case L.span (/= '/') l of

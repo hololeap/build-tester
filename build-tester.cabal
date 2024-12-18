@@ -41,9 +41,17 @@ flag pedantic
     manual:      True
 
 common all
-    -- ghc-9.2 turns on -Wincomplete-uni-patterns for -Wall, so
-    -- let's explicitly enable it to be consistent across ghc versions
-    ghc-options:        -Wall -Wincomplete-uni-patterns
+
+    ghc-options:
+        -Wall
+
+        -- conduit-extra process functions do _not_ work correctly without
+        -- threading support in the runtime
+        -threaded
+
+        -- ghc-9.2 turns on -Wincomplete-uni-patterns for -Wall, so
+        -- let's explicitly enable it to be consistent across ghc versions
+        -Wincomplete-uni-patterns
 
     if flag(pedantic)
         ghc-options: -Werror
@@ -68,6 +76,9 @@ library
     build-depends:
         , base >=4.13 && <5
         , QuickCheck
+        , bytestring
+        , conduit
+        , conduit-extra
         , directory
         , hashable
         , monoidal-containers

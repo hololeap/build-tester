@@ -13,13 +13,21 @@ module Distribution.Gentoo.BuildTest.Cmd
     , defaultDie
     ) where
 
+import Conduit
 import Control.Monad.Trans.Accum
-import Control.Monad.IO.Class
+import qualified Data.ByteString as BS
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Builder as BSB
+import Data.ByteString.Builder (Builder, toLazyByteString)
+import qualified Data.ByteString.Lazy as BSL
+import Data.Conduit.Process (sourceProcessWithStreams)
 import Data.Monoid (First(..))
+import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8Lenient)
 import System.Directory (findExecutable)
 import System.Exit (ExitCode(..), die)
-import System.IO (hPutStrLn, stderr)
-import System.Process (readProcessWithExitCode)
+import System.IO (hPutStrLn, stdout, stderr)
+import System.Process
 
 import Distribution.Gentoo.BuildTest.Types
 
@@ -41,20 +49,20 @@ instance Monoid MemoPaths where
 --   have not been initialized yet
 type EnvT = AccumT MemoPaths
 
-runEix :: MonadIO m => [String] -> EnvT m String
+runEix :: MonadIO m => [String] -> EnvT m (Text, Text, ExitCode)
 runEix args = do
     e <- askEixPath
-    runCmd e args
+    liftIO $ runCmd e args
 
-runPortageq :: MonadIO m => [String] -> EnvT m String
+runPortageq :: MonadIO m => [String] -> EnvT m (Text, Text, ExitCode)
 runPortageq args = do
     e <- askPortageqPath
-    runCmd e args
+    liftIO $ runCmd e args
 
-runEmerge :: MonadIO m => [String] -> EnvT m String
+runEmerge :: MonadIO m => [String] -> EnvT m (Text, Text, ExitCode)
 runEmerge args = do
     e <- askEmergePath
-    runCmd e args
+    liftIO $ runCmd e args
 
 askEixPath :: MonadIO m => EnvT m EixPath
 askEixPath = getFirst . envEixPath <$> look >>= \case
@@ -117,16 +125,29 @@ findEmerge = liftIO $ do
             , "sys-apps/portage is required."
             ]
 
--- | Run a command and return stdout, or 'defaultDie' if it fails.
-runCmd :: (MonadIO m, ToString r)
+-- | Run a command, transparently sending stdout and stderr to their
+--   respective handles. Returns stdout, stderr, and exit code.
+runCmd :: ToString r
     => r
     -> [String]
-    -> m String
-runCmd exe args = liftIO $ do
-    (ec, out, err) <- readProcessWithExitCode (toString exe) args ""
-    case ec of
-         ExitSuccess -> pure out
-         ExitFailure _ -> defaultDie exe args ec out err
+    -> IO (Text, Text, ExitCode)
+runCmd exe args = do
+    let cp = (proc (toString exe) args)
+            { delegate_ctlc = True }
+    (ec, bOut, bErr) <- sourceProcessWithStreams cp cIn cOut cErr
+    pure (toText bOut, toText bErr, ec)
+  where
+    toText :: Builder -> Text
+    toText = decodeUtf8Lenient . BSL.toStrict . toLazyByteString
+
+    cIn :: ConduitT () ByteString IO ()
+    cIn = pure ()
+
+    cOut :: ConduitT ByteString Void IO Builder
+    cOut = iterMC (BS.hPut stdout) .| foldMapC BSB.byteString
+
+    cErr :: ConduitT ByteString Void IO Builder
+    cErr = iterMC (BS.hPut stderr) .| foldMapC BSB.byteString
 
 -- | Dies with a default message when a program returns an unexpected exit code
 defaultDie :: (MonadIO m, ToString r)
