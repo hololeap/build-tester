@@ -3,6 +3,9 @@
 module Distribution.Gentoo.BuildTest.Cmd
     ( MemoPaths(..)
     , EnvT
+    , runEix
+    , runPortageq
+    , runEmerge
     , askEixPath
     , askPortageqPath
     , askEmergePath
@@ -37,6 +40,21 @@ instance Monoid MemoPaths where
 -- | Only allows for reading the memoized paths, or initializing them if they
 --   have not been initialized yet
 type EnvT = AccumT MemoPaths
+
+runEix :: MonadIO m => [String] -> EnvT m String
+runEix args = do
+    e <- askEixPath
+    runCmd e args
+
+runPortageq :: MonadIO m => [String] -> EnvT m String
+runPortageq args = do
+    e <- askPortageqPath
+    runCmd e args
+
+runEmerge :: MonadIO m => [String] -> EnvT m String
+runEmerge args = do
+    e <- askEmergePath
+    runCmd e args
 
 askEixPath :: MonadIO m => EnvT m EixPath
 askEixPath = getFirst . envEixPath <$> look >>= \case

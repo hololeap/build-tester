@@ -24,8 +24,7 @@ allRepoPackages :: MonadIO m
     => RepoName
     -> EnvT m RepoPackages
 allRepoPackages (RepoName n) = do
-    eix <- askEixPath
-    out <- runCmd eix args
+    out <- runEix args
     pure $ toRepoPackages out
   where
     args = ["--only-names", "--in-overlay", n]
@@ -34,8 +33,7 @@ installedRepoPackages :: MonadIO m
     => RepoName
     -> EnvT m RepoPackages
 installedRepoPackages (RepoName n) = do
-    eix <- askEixPath
-    out <- runCmd eix args
+    out <- runEix args
     pure $ toRepoPackages out
   where
     args = ["--only-names", "--installed-from-overlay", n]
