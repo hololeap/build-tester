@@ -1,0 +1,119 @@
+cabal-version:      3.0
+name:               build-tester
+version:            0.1.0.0
+synopsis:           Build-test packages from a gentoo repository
+
+tested-with:        GHC == { 8.10.7, 9.0.2, 9.2.8, 9.4.5 }
+
+-- A longer description of the package.
+description:
+    A utility for build-testing packages in a gentoo repository. It looks for
+    packages from the repo that are not currently installed, chooses one, tries
+    to emerge it, then repeats.
+
+    This is intended for development sandboxes which are testing the repository
+    ecosystem en-masse (for instance, testing the gentoo-haskell ecosystem
+    before keywording a new version of GHC).
+homepage:           https://github.com/gentoo-haskell/build-tester
+bug-reports:        https://github.com/gentoo-haskell/build-tester/issues
+
+license:            GPL-3.0-only
+license-file:       LICENSE
+author:             hololeap
+maintainer:         hololeap@users.noreply.github.com
+
+copyright:          Copyright (C) 2023 Gentoo Authors
+category:           Development
+extra-source-files: CHANGELOG.md
+
+source-repository head
+    type:     git
+    location: https://github.com/gentoo-haskell/build-tester
+
+flag gentoo-tests
+    description: Enable tests that depend on a working Gentoo environment
+    default:     False
+    manual:      True
+
+flag pedantic
+    description: Enable -Werror
+    default:     False
+    manual:      True
+
+common all
+    -- ghc-9.2 turns on -Wincomplete-uni-patterns for -Wall, so
+    -- let's explicitly enable it to be consistent across ghc versions
+    ghc-options:        -Wall -Wincomplete-uni-patterns
+
+    if flag(pedantic)
+        ghc-options: -Werror
+
+    default-extensions: StrictData
+
+common fast
+    ghc-options: -threaded -with-rtsopts=-N
+
+library
+    import:           all
+<<<<<<< HEAD
+    exposed-modules:  MyLib
+=======
+    exposed-modules:
+        , Distribution.Gentoo.BuildTest
+>>>>>>> 441f24f (Initial commit)
+
+    -- Modules included in this library but not exported.
+    -- other-modules:
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+<<<<<<< HEAD
+    build-depends:    base >=4.13 && <5
+=======
+    build-depends:
+        , base >=4.13 && <5
+        , directory
+        , hashable
+        , monoidal-containers
+        , mtl
+        , process
+        , text
+        , transformers
+>>>>>>> 441f24f (Initial commit)
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+executable build-tester
+    import:           all
+    main-is:          Main.hs
+
+    -- Modules included in this executable, other than Main.
+    -- other-modules:
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+    build-depends:
+        , base               >=4.13 && <5
+        , build-tester
+
+    hs-source-dirs:   src-exe
+    default-language: Haskell2010
+
+test-suite build-tester-test
+    import:           all, fast
+    default-language: Haskell2010
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:
+        , build-tester
+        , base
+        , QuickCheck
+        , tasty
+        , tasty-hunit
+
+    if flag(gentoo-tests)
+        cpp-options: -DGENTOO_TESTS
+        -- build-depends:
+        -- other-modules:
+
