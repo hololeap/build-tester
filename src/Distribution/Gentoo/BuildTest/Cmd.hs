@@ -29,9 +29,7 @@ defaultEmergeArgs =
 
 defaultPqueryArgs :: [String]
 defaultPqueryArgs =
-    [ "--raw"
-    , "--unfiltered"
-    , "--no-version"
+    [ "--no-version"
     ]
 
 -- | Find the path to the @emerge@ executable or throw an error. Caches the
