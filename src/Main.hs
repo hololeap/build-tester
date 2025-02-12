@@ -56,8 +56,8 @@ main = bracket acquire dumpSummary $ \(nis, rs, ref) ->
                         liftIO $ printColor Green
                             $ "*** " ++ toString p ++ ": Success!"
 
-        liftIO $ putStrLn ""
-        liftEnv runHaskellUpdater
+                liftIO $ putStrLn ""
+                liftEnv runHaskellUpdater
 
     acquire :: IO (HS.HashSet Package, [Package], IORef AttemptSets)
     acquire = do
