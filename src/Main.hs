@@ -56,7 +56,6 @@ main = bracket acquire dumpSummary $ \(nis, rs, ref) ->
                         liftIO $ printColor Green
                             $ "*** " ++ toString p ++ ": Success!"
 
-                liftIO $ putStrLn ""
                 liftEnv runHaskellUpdater
 
     acquire :: IO (HS.HashSet Package, [Package], IORef AttemptSets)
@@ -85,7 +84,7 @@ showSummary (rfa, tda, bfa, esa) = unlines $
     , show (S.size tda) ++ " packages tried to downgrade:"
     ] ++ showSet tda ++
     [ ""
-    , show (S.size bfa) ++ " packags failed to build:"
+    , show (S.size bfa) ++ " packages failed to build:"
     ] ++ showSet bfa ++
     [ ""
     , show (S.size esa) ++ " packages completed successfully:"
