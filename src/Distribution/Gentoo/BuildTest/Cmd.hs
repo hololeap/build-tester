@@ -23,6 +23,7 @@ defaultEmergeArgs =
     , "--deep"
     , "--complete-graph"
     , "--oneshot"
+    , "--update"
     , "--color=n" -- Need a ANSI filtering library
     , "--nospinner"
     ]
