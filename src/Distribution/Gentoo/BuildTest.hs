@@ -49,7 +49,14 @@ runHaskellUpdater :: Env ()
 runHaskellUpdater = do
     hu <- haskellUpdaterPath
     liftIO $ withCmd runTransparent hu args $ \_ -> pure ()
-    where args = "--" : defaultEmergeArgs
+  where
+    args = "--" :
+        [ "--ignore-default-opts"
+        , "--verbose"
+        , "--quiet-build"
+        , "--color=n" -- Need a ANSI filtering library
+        , "--nospinner"
+        ]
 
 notInstalledPkgs :: Repository -> Env (HashSet Package)
 notInstalledPkgs repo = S.difference <$> repoPkgs repo <*> installedPkgs
